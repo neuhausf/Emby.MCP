@@ -1,0 +1,20 @@
+services:
+  emby-mcp:
+    build: .
+    image: emby-mcp
+    container_name: emby-mcp
+    restart: unless-stopped
+    ports:
+      - "12345:12345"
+    volumes:
+      # Mount the .env file from the host into the container.
+      # The server script (app_lifespan) looks for /app/.env at startup.
+      # Copy .env.example to .env and fill in your Emby credentials before starting.
+      - ./.env:/app/.env:ro
+    # Optional: add to the same Docker network as your Emby server container
+    # networks:
+    #   - emby-network
+
+# networks:
+#   emby-network:
+#     external: true
