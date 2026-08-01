@@ -6,7 +6,7 @@ and Python learning exercise, inspired into action by hearing Yoko Li talk about
 **Note, this is an independent project with no affiliation to, or endorsement by, [Emby LLC](https://emby.media/).**
 
 ## Contents
-[Features](#features) | [Requirements](#requirements) | [Installation](#installation) | [Usage](#usage) | [Under The Hood](#under-the-hood) | [Also See](#also-see) | [License](#license)
+[Features](#features) | [Requirements](#requirements) | [Installation](#installation) | [Docker](#docker) | [Usage](#usage) | [Under The Hood](#under-the-hood) | [Also See](#also-see) | [License](#license)
 
 ## Features
 A minimum viable project that allows an LLM to do the following via MCP tools:
@@ -185,6 +185,120 @@ Visual Studio Code is a good choice for developers - it integrates with MS Copil
 }
 ```
 * Start and use the Emby.MCP server per the [offcial VS Code documentation](https://code.visualstudio.com/docs/copilot/chat/mcp-servers#_use-mcp-tools-in-agent-mode).
+
+## Docker
+Running Emby.MCP inside Docker is an alternative to the manual installation above. The image uses the official `ghcr.io/astral-sh/uv` base image (Python 3.13, Debian Bookworm slim), applies the required hotfix patches at build time, and serves the MCP endpoint over **SSE transport on port 12345**.
+
+### Quick Start
+
+**1. Prepare your credentials file**
+
+Copy the provided template and fill in your Emby server details:
+```
+cp .env.example .env
+```
+Edit `.env` so that it looks similar to this (adjust for your server):
+```
+EMBY_SERVER_URL=http://host.docker.internal:8096
+EMBY_USERNAME=your-emby-username
+EMBY_PASSWORD=your-emby-password
+EMBY_VERIFY_SSL=False
+LLM_MAX_ITEMS=100
+```
+> **Tip:** If your Emby server runs as a separate container on the same Docker host, use `host.docker.internal` as the hostname. For a LAN/remote server use its IP address or hostname instead.
+
+**2. Build the image**
+```
+docker build -t emby-mcp .
+```
+
+**3. Run the container**
+```
+docker run -d \
+  -p 12345:12345 \
+  -v "$(pwd)/.env:/app/.env:ro" \
+  --name emby-mcp \
+  emby-mcp
+```
+> **Note:** The server reads credentials from the `.env` file at `/app/.env` inside the container (the script uses `find_dotenv` to look for this file). On Windows CMD, replace `$(pwd)` with `%cd%`.
+
+The MCP server is now reachable at `http://localhost:12345/sse`.
+
+**4. Verify it is running**
+```
+docker logs emby-mcp
+```
+You should see output similar to:
+```
+Logon to media server was successful.
+Emby.MCP Copyright (C) 2025 Dominic Search <code@angeltek.co.uk>
+...
+```
+
+### Using Docker Compose
+
+A `docker-compose.yml` is included for convenience:
+```
+docker compose up -d
+```
+To rebuild after a code or dependency change:
+```
+docker compose up -d --build
+```
+To stop and remove the container:
+```
+docker compose down
+```
+
+### Configuring Your MCP Client for Docker
+
+Point your MCP client at the SSE endpoint instead of launching a local process.
+
+**Claude Desktop** (`claude_desktop_config.json`):
+```json
+{
+  "mcpServers": {
+    "Emby": {
+      "type": "sse",
+      "url": "http://localhost:12345/sse"
+    }
+  }
+}
+```
+
+**VS Code** (`mcp.json`):
+```json
+{
+  "servers": {
+    "Emby": {
+      "type": "sse",
+      "url": "http://localhost:12345/sse"
+    }
+  }
+}
+```
+
+### Environment Variables Reference
+
+| Variable | Default | Description |
+|---|---|---|
+| `EMBY_SERVER_URL` | `http://localhost:8096` | Full URL to your Emby server |
+| `EMBY_USERNAME` | *(required)* | Emby login username |
+| `EMBY_PASSWORD` | *(required)* | Emby login password |
+| `EMBY_VERIFY_SSL` | `True` | Set `False` to skip SSL certificate verification (e.g. self-signed certs) |
+| `LLM_MAX_ITEMS` | `100` | Max items per search chunk returned to the LLM (`0` = no limit) |
+
+### Ports and Volumes
+
+| | Value | Notes |
+|---|---|---|
+| **Port** | `12345/tcp` | SSE transport endpoint for MCP clients |
+| **Config** | `.env` (host) → `/app/.env` (container) | Mount at runtime; never bake credentials into the image |
+
+### Security Notes
+* The `.env` file is excluded from the Docker build context via `.dockerignore` and from version control via `.gitignore` — credentials are never baked into the image.
+* The container process runs as a non-root `appuser` user.
+* Pass credentials by mounting the `.env` file as a read-only volume: `-v "$(pwd)/.env:/app/.env:ro"`.
 
 ## Usage
 ### Allow The Client to Use Tools 

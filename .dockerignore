@@ -1,0 +1,42 @@
+# Docker build context exclusions for Emby.MCP
+# Keeps the image lean and prevents secrets from leaking into the image.
+
+# Python artefacts
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+.eggs/
+
+# Virtual environment (rebuilt inside the image)
+.venv/
+venv/
+env/
+
+# Credentials – NEVER bake these into the image
+.env
+
+# Version-control metadata
+.git/
+.gitignore
+
+# Editor / IDE settings
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS noise
+.DS_Store
+Thumbs.db
+
+# Docs / extras that are not needed at runtime
+*.md
+LICENSE.txt
+Example\ Claude\ Transcript.md
+
+# Temporary and build artefacts
+build/
+dist/
+temp/
