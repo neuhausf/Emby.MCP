@@ -1,7 +1,6 @@
 services:
   emby-mcp:
-    build: .
-    image: emby-mcp
+    image: ghcr.io/neuhausf/emby.mcp:latest
     container_name: emby-mcp
     restart: unless-stopped
     ports:
