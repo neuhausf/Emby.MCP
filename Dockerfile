@@ -6,21 +6,28 @@
 # Build:  docker build -t emby-mcp .
 # Run:    docker run -d -p 12345:12345 -v "$(pwd)/.env:/app/.env:ro" --name emby-mcp emby-mcp
 
-FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim
+FROM python:3.13-slim-bookworm
+
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 # ── Environment ──────────────────────────────────────────────────────────────
-ENV UV_PYTHON=python3.13 \
-    UV_PYTHON_PREFERENCE=only-managed \
+ENV UV_PYTHON_DOWNLOADS=0 \
+    UV_LINK_MODE=copy \
     # Keep bytecode out of the image layers
     PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    PATH="/app/.venv/bin:$PATH"
 
 WORKDIR /app
 
 # ── Dependencies ─────────────────────────────────────────────────────────────
 # Copy only the files needed to resolve & install deps first (better layer caching).
 COPY pyproject.toml uv.lock ./
-RUN uv sync --frozen --link-mode=copy --no-install-project
+RUN uv sync \
+    --frozen \
+    --no-install-project \
+    --no-dev \
+    --no-editable
 
 # ── Application source ────────────────────────────────────────────────────────
 COPY emby_mcp_server.py lib_emby_functions.py lib_emby_debugging.py ./
@@ -46,4 +53,4 @@ EXPOSE 12345
 # The .env file must NOT be baked into the image.
 # Uses the MCP CLI to start the server with SSE transport so that MCP clients
 # can connect over HTTP instead of stdio.
-CMD ["uv", "run", "mcp", "run", "--transport", "sse", "--host", "0.0.0.0", "--port", "12345", "emby_mcp_server.py"]
+CMD ["mcp", "run", "--transport", "sse", "--host", "0.0.0.0", "--port", "12345", "emby_mcp_server.py"]
