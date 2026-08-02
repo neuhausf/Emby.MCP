@@ -16,7 +16,10 @@ ENV UV_PYTHON_DOWNLOADS=0 \
     # Keep bytecode out of the image layers
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PATH="/app/.venv/bin:$PATH"
+    PATH="/app/.venv/bin:$PATH" \
+    # FastMCP server settings (read by FastMCP Settings via FASTMCP_ prefix)
+    FASTMCP_HOST=0.0.0.0 \
+    FASTMCP_PORT=12345
 
 WORKDIR /app
 
@@ -53,4 +56,4 @@ EXPOSE 12345
 # The .env file must NOT be baked into the image.
 # Uses the MCP CLI to start the server with SSE transport so that MCP clients
 # can connect over HTTP instead of stdio.
-CMD ["mcp", "run", "--transport", "sse", "--host", "0.0.0.0", "--port", "12345", "emby_mcp_server.py"]
+CMD ["mcp", "run", "--transport", "sse", "emby_mcp_server.py"]
